@@ -22,7 +22,7 @@ public class StageGenerator : MonoBehaviour
         int Dist = Random.Range(minDistance, maxDistance+1);
         int count = Mathf.CeilToInt(Dist / chunkSize);
 
-        Vector3 startPos = player.position + new Vector3(chunkSize * 0.5f, 0f, 0f);
+        Vector3 startPos = player.position + new Vector3(chunkSize * 0.5f, -3.0f, 0f);
 
         for (int i = 0; i < count; i++)
         {
@@ -36,7 +36,7 @@ public class StageGenerator : MonoBehaviour
         }
 
         // 崖を最後に配置
-        Vector3 cliffPos = startPos + new Vector3(count * chunkSize, 0f, 0f);
+        Vector3 cliffPos = startPos + new Vector3(count * chunkSize + 15.0f, 0f, 0f);
         Instantiate(cliffPrefab, cliffPos, Quaternion.identity);
     }
 }
