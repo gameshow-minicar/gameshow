@@ -67,6 +67,6 @@
         "*.sln": "*.csproj",
         "*.slnx": "*.csproj"
     },
-    "dotnet.defaultSolution": "gameshow-minicar.slnx",
+    "dotnet.defaultSolution": "gameshow.slnx",
     "dotnet.enableWorkspaceBasedDevelopment": false
 }

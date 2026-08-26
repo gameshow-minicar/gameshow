@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 public class CarMove : MonoBehaviour
@@ -11,12 +10,12 @@ public class CarMove : MonoBehaviour
     public bool braked = false;
 
     public GameManager game;
+
     private Rigidbody rb;
 
     private float Maxbar = 100000.0f;
-    //Image型の変数_imageを宣言しておく
-    public Image bar;
 
+    public Image bar;
     public TMPro.TMP_Text powertext;
 
     public bool killed = false;
@@ -24,55 +23,211 @@ public class CarMove : MonoBehaviour
     public AudioSource se;
 
     public AudioClip chargeSE;
-
     public AudioClip brakeSE;
     public AudioClip crashSE;
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
+
+    // changeの発動条件
+    private const double changeThreshold = 5.0;
+
+    // 発射後の経過時間
+    private float launchTimer = 0f;
+
+    // ブレーキ可能か
+    private bool canBrake = false;
+
+    // 発射後、一度changeが5未満になったか
+    private bool changeReset = false;
+
+    // SEの間隔
+    private float seTimer = 0f;
+
+    private const float seDelay = 0.5f;
+
+
     void Start()
     {
-        rb = GetComponent<Rigidbody>();      
+        rb = GetComponent<Rigidbody>();
+
         if (rb == null)
         {
             Debug.Log("Rigidbodyが見つかりません");
-        }  
-        rb.linearDamping = deceleration;   // 数値を大きくすると減速が強くなる
+            return;
+        }
+
+        rb.linearDamping = deceleration;
     }
 
-    // Update is called once per frame
+
     void Update()
     {
-        if (Keyboard.current.pKey.wasPressedThisFrame && game.state == GameManager.GameState.Charge)
+        // ==========================================
+        // SEタイマー
+        // ==========================================
+
+        if (seTimer > 0)
         {
-            if(rb != null && BrakeMode == false)
+            seTimer -= Time.deltaTime;
+        }
+
+
+        // ==========================================
+        // CHARGE
+        // ==========================================
+
+        if (game.state == GameManager.GameState.Charge)
+        {
+            if (ChangeManager.change >= changeThreshold)
             {
-                se.PlayOneShot(chargeSE);
-                power += 1000;
+                if (rb != null && BrakeMode == false)
+                {
+                    power += (float)ChangeManager.change * 8.5f;
+
+                    PlaySE(chargeSE);
+                }
             }
         }
 
-        if (Keyboard.current.spaceKey.wasPressedThisFrame  && game.state == GameManager.GameState.Launch)
+
+        // ==========================================
+        // READY
+        // change >= 5 で発射
+        // ==========================================
+
+        if (game.state == GameManager.GameState.Ready)
         {
-            if(rb != null && BrakeMode == false)
+            if (BrakeMode == false &&
+                ChangeManager.change >= changeThreshold)
             {
-                rb.AddForce(transform.forward * power);
-                BrakeMode = true;
-            }
-            else if(rb != null && BrakeMode == true && braked == false)
-            {
-                se.PlayOneShot(brakeSE);
-                braked = true;
-                rb.linearDamping = deceleration * 50;
+                if (rb != null)
+                {
+                    rb.AddForce(transform.forward * power);
+
+                    BrakeMode = true;
+                    braked = false;
+
+                    launchTimer = 0f;
+                    canBrake = false;
+                    changeReset = false;
+
+                    game.launchTime = Time.time;
+
+                    // GameManagerをLaunch状態にする
+                    game.state = GameManager.GameState.Launch;
+
+                    // 発射時刻を記録
+                    // GameManagerのリザルト判定にも必要
+                    // GameManager側のlaunchTimeがprivateなので、
+                    // ここでは別途処理する必要があります。
+
+                    PlaySE(game.launchSE);
+
+                    Debug.Log("発射！");
+                }
             }
         }
+
+
+        // ==========================================
+        // LAUNCH
+        // ==========================================
+
+        if (game.state == GameManager.GameState.Launch)
+        {
+            // 発射後の時間
+            game.hinttext.text = " ";
+            game.counttext.text = " ";
+            launchTimer += Time.deltaTime;
+
+
+            // --------------------------------------
+            // 発射から1秒経過
+            // --------------------------------------
+
+            if (launchTimer >= 1.0f)
+            {
+                canBrake = true;
+                game.hinttext.text = "ハンドルを後ろに倒してブレーキ";
+            }
+
+
+            // --------------------------------------
+            // changeが5未満になった
+            // --------------------------------------
+
+            if (canBrake &&
+                ChangeManager.change < changeThreshold)
+            {
+                changeReset = true;
+            }
+
+
+            // --------------------------------------
+            // 再びchangeが5以上になった
+            // → ブレーキ
+            // --------------------------------------
+
+            if (canBrake &&
+                changeReset &&
+                braked == false &&
+                ChangeManager.change >= changeThreshold)
+            {
+                if (rb != null)
+                {
+                    rb.linearDamping = deceleration * 50f;
+
+                    braked = true;
+
+                    PlaySE(brakeSE);
+
+                    Debug.Log("ブレーキ！");
+                }
+            }
+        }
+
+
+        // ==========================================
+        // UI
+        // ==========================================
+
         bar.fillAmount = power / Maxbar;
-        powertext.text = (power / 1000f).ToString("0") + "%";
+
+        powertext.text =
+            (power / 1000f).ToString("0") + "%";
     }
+
+
+    // ==========================================
+    // SE
+    // ==========================================
+
+    void PlaySE(AudioClip clip)
+    {
+        if (clip == null || se == null)
+        {
+            return;
+        }
+
+        if (seTimer > 0)
+        {
+            return;
+        }
+
+        se.PlayOneShot(clip);
+
+        seTimer = seDelay;
+    }
+
+
+    // ==========================================
+    // 衝突
+    // ==========================================
 
     void OnCollisionEnter(Collision other)
     {
         if (other.gameObject.CompareTag("kill"))
         {
             se.PlayOneShot(crashSE);
+
             killed = true;
         }
     }
