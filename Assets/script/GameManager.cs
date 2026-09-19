@@ -34,14 +34,15 @@ public class GameManager : MonoBehaviour
     private bool resultShown = false;
 
     public enum GameState
-    {
-        Start,
-        Charge,
-        Wait,
-        Ready,
-        Launch,
-        Result
-    }
+{
+    Start,
+    Charge,
+    Wait,
+    Ready,
+    Launch,
+    Result,
+    Ranking
+}
 
     public GameState state;
 
@@ -61,11 +62,19 @@ public class GameManager : MonoBehaviour
     public AudioClip c1SE;
     public AudioClip c2SE;
 
+    public GameObject rankingPanel;
+
+    public TMP_Text ranking1text;
+    public TMP_Text ranking2text;
+    public TMP_Text ranking3text;
+    public TMP_Text ranking4text;
+
 
     void Start()
     {
         resultPanel.SetActive(false);
         gamePanel.SetActive(false);
+        rankingPanel.SetActive(false);
 
         StartCoroutine(GameFlow());
     }
@@ -77,12 +86,18 @@ public class GameManager : MonoBehaviour
         // リザルト画面
         // ==========================================
 
-        if (state == GameState.Result &&
-            Keyboard.current != null &&
-            Keyboard.current.spaceKey.wasPressedThisFrame)
-        {
-            SceneManager.LoadScene("titlescene");
-        }
+if (state == GameState.Result &&
+    Keyboard.current != null &&
+    Keyboard.current.enterKey.wasPressedThisFrame)
+{
+    ShowRanking();
+}
+else if (state == GameState.Ranking &&
+         Keyboard.current != null &&
+         Keyboard.current.enterKey.wasPressedThisFrame)
+{
+    SceneManager.LoadScene("titlescene");
+}
 
 
         // ==========================================
@@ -131,6 +146,7 @@ public class GameManager : MonoBehaviour
 
             if (car.killed == false)
             {
+                RankingManager.AddScore(scoredist);
                 resultscoretext.text =
                     scoredist.ToString("0") + " m";
 
@@ -240,7 +256,7 @@ public class GameManager : MonoBehaviour
 
         state = GameState.Ready;
 
-        hinttext.text = "ハンドルを前に倒して発車";
+        hinttext.text = "ボタンを押して発車!";
 
         se.PlayOneShot(goSE);
 
@@ -263,4 +279,31 @@ public class GameManager : MonoBehaviour
 
         state = GameState.Result;
     }
+
+    void ShowRanking()
+{
+    resultPanel.SetActive(false);
+    rankingPanel.SetActive(true);
+
+    state = GameState.Ranking;
+
+    ranking1text.text = "---";
+    ranking2text.text = "---";
+    ranking3text.text = "---";
+    ranking4text.text = "---";
+
+    for (int i = 0; i < RankingManager.scores.Count; i++)
+    {
+        string text = RankingManager.scores[i] + " m";
+
+        if (i == 0)
+            ranking1text.text = text;
+        else if (i == 1)
+            ranking2text.text = text;
+        else if (i == 2)
+            ranking3text.text = text;
+        else if (i == 3)
+            ranking4text.text = text;
+    }
+}
 }

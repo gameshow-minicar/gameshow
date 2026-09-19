@@ -6,7 +6,7 @@ public class Title : MonoBehaviour
 {
     void Update()
     {
-        if (Keyboard.current.spaceKey.wasPressedThisFrame)
+        if (Keyboard.current.enterKey.wasPressedThisFrame)
         {
             SceneManager.LoadScene("gamescene");
         }

@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.InputSystem;
 
 public class CarMove : MonoBehaviour
 {
@@ -35,8 +36,6 @@ public class CarMove : MonoBehaviour
     // ブレーキ可能か
     private bool canBrake = false;
 
-    // 発射後、一度changeが5未満になったか
-    private bool changeReset = false;
 
     // SEの間隔
     private float seTimer = 0f;
@@ -95,8 +94,9 @@ public class CarMove : MonoBehaviour
 
         if (game.state == GameManager.GameState.Ready)
         {
-            if (BrakeMode == false &&
-                ChangeManager.change >= changeThreshold)
+            if (Keyboard.current != null &&
+                Keyboard.current.enterKey.wasPressedThisFrame &&
+                BrakeMode == false)
             {
                 if (rb != null)
                 {
@@ -107,17 +107,11 @@ public class CarMove : MonoBehaviour
 
                     launchTimer = 0f;
                     canBrake = false;
-                    changeReset = false;
 
                     game.launchTime = Time.time;
 
                     // GameManagerをLaunch状態にする
                     game.state = GameManager.GameState.Launch;
-
-                    // 発射時刻を記録
-                    // GameManagerのリザルト判定にも必要
-                    // GameManager側のlaunchTimeがprivateなので、
-                    // ここでは別途処理する必要があります。
 
                     PlaySE(game.launchSE);
 
@@ -136,6 +130,7 @@ public class CarMove : MonoBehaviour
             // 発射後の時間
             game.hinttext.text = " ";
             game.counttext.text = " ";
+
             launchTimer += Time.deltaTime;
 
 
@@ -146,30 +141,18 @@ public class CarMove : MonoBehaviour
             if (launchTimer >= 1.0f)
             {
                 canBrake = true;
-                game.hinttext.text = "ハンドルを後ろに倒してブレーキ";
+                game.hinttext.text = "ボタンを押してブレーキ!";
             }
 
 
             // --------------------------------------
-            // changeが5未満になった
+            // Spaceキーでブレーキ
             // --------------------------------------
 
             if (canBrake &&
-                ChangeManager.change < changeThreshold)
-            {
-                changeReset = true;
-            }
-
-
-            // --------------------------------------
-            // 再びchangeが5以上になった
-            // → ブレーキ
-            // --------------------------------------
-
-            if (canBrake &&
-                changeReset &&
                 braked == false &&
-                ChangeManager.change >= changeThreshold)
+                Keyboard.current != null &&
+                Keyboard.current.enterKey.wasPressedThisFrame)
             {
                 if (rb != null)
                 {
